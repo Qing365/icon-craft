@@ -651,16 +651,16 @@
   <!-- API KEY BANNER -->
   <div class="api-banner" id="apiBanner">
     <div class="api-banner-left">
-      <div class="api-banner-label">Google Gemini API Key</div>
+      <div class="api-banner-label">OpenRouter API Key（免费）</div>
       <div class="api-input-row">
-        <input type="password" class="api-input" id="apiKeyInput" placeholder="AIza..." autocomplete="off">
+        <input type="password" class="api-input" id="apiKeyInput" placeholder="sk-or-v1-..." autocomplete="off">
         <button class="btn-set" id="apiSetBtn">保存</button>
       </div>
       <div class="api-status" id="apiStatus"></div>
     </div>
     <div class="api-note">
-      Key 仅保存在浏览器本地（localStorage），不上传任何服务器。<br>
-      没有 Key？前往 <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> 免费获取，无需付费。
+      Key 仅保存在浏览器本地，不上传任何服务器。<br>
+      没有 Key？前往 <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> 免费注册获取，无需绑定信用卡。
     </div>
   </div>
 
@@ -755,7 +755,7 @@
 
 </div>
 
-<footer>IconCraft · Powered by Google Gemini 2.0 Flash · API Key 保存于本地，不外传</footer>
+<footer>IconCraft · Powered by OpenRouter (Gemma 3 27B) · API Key 保存于本地，不外传</footer>
 
 <script>
 // ── STATE ──
@@ -786,15 +786,15 @@ const errorToast = $('errorToast');
 
 // ── API KEY ──
 (function loadKey() {
-  const saved = localStorage.getItem('iconcraft_gemini_key');
-  if (saved) { S.apiKey = saved; apiInput.value = saved; setKeyStatus(true); }
+  const saved = localStorage.getItem('iconcraft_or_key');
+  if (saved) { S.apiKey = saved; apiInput.value = saved; setKeyStatus(true); updateGenBtn(); }
 })();
 
 $('apiSetBtn').addEventListener('click', () => {
   const v = apiInput.value.trim();
-  if (!v.startsWith('AIza') || v.length < 20) { apiStatus.textContent = '格式不对，应以 AIza 开头'; apiStatus.className = 'api-status err'; return; }
+  if (!v.startsWith('sk-or-') || v.length < 20) { apiStatus.textContent = '格式不对，应以 sk-or- 开头'; apiStatus.className = 'api-status err'; return; }
   S.apiKey = v;
-  localStorage.setItem('iconcraft_gemini_key', v);
+  localStorage.setItem('iconcraft_or_key', v);
   setKeyStatus(true);
   updateGenBtn();
 });
@@ -897,7 +897,7 @@ genBtn.addEventListener('click', generate);
 async function generate() {
   const semantic = semanticInput.value.trim() || S.tag;
   if (!semantic) { showErr('请输入语义描述或选择一个标签'); return; }
-  if (!S.apiKey) { showErr('请先填写 Gemini API Key'); return; }
+  if (!S.apiKey) { showErr('请先填写 OpenRouter API Key'); return; }
   hideErr();
 
   genBtn.disabled = true;
@@ -930,17 +930,6 @@ async function generate() {
 
   const styleDesc = styleMap[S.style] || S.style;
 
-  // 构建 Gemini parts：先放图片，再放文字
-  const parts = [];
-  S.images.slice(0, 3).forEach(img => {
-    parts.push({
-      inline_data: {
-        mime_type: img.type,
-        data: img.data.split(',')[1]
-      }
-    });
-  });
-
   const promptText = `You are an expert SVG icon designer.
 ${S.images.length > 0 ? 'Study the uploaded reference images carefully — extract the stroke weight, corner radius, color palette, level of detail, and overall visual character. Your icons MUST match this style.' : 'No reference images provided — use a clean professional icon style.'}
 
@@ -961,23 +950,31 @@ SVG requirements:
 Respond ONLY with valid JSON array — no markdown fences, no explanation, no extra text:
 [{"svg":"<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>...</svg>","label":"描述变体特征，中文，≤6字"},...]`;
 
-  parts.push({ text: promptText });
+  // 构建 OpenRouter messages，图片用 base64 inline
+  const userContent = [];
+  S.images.slice(0, 3).forEach(img => {
+    userContent.push({
+      type: 'image_url',
+      image_url: { url: img.data }
+    });
+  });
+  userContent.push({ type: 'text', text: promptText });
 
   try {
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${S.apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 4096
-          }
-        })
-      }
-    );
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${S.apiKey}`,
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'IconCraft'
+      },
+      body: JSON.stringify({
+        model: 'google/gemma-3-27b-it:free',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: userContent }]
+      })
+    });
 
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
@@ -986,8 +983,8 @@ Respond ONLY with valid JSON array — no markdown fences, no explanation, no ex
     }
 
     const data = await resp.json();
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!raw) throw new Error('Gemini 返回内容为空，请重试');
+    const raw = data.choices?.[0]?.message?.content || '';
+    if (!raw) throw new Error('返回内容为空，请重试');
 
     const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     const icons = JSON.parse(clean);
