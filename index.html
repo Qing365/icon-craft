@@ -755,7 +755,7 @@
 
 </div>
 
-<footer>IconCraft · Powered by OpenRouter (Gemma 3 27B) · API Key 保存于本地，不外传</footer>
+<footer>IconCraft · Powered by OpenRouter (Llama 4 Scout) · API Key 保存于本地，不外传</footer>
 
 <script>
 // ── STATE ──
@@ -970,7 +970,7 @@ Respond ONLY with valid JSON array — no markdown fences, no explanation, no ex
         'X-Title': 'IconCraft'
       },
       body: JSON.stringify({
-        model: 'google/gemma-3-27b-it:free',
+        model: 'meta-llama/llama-4-scout:free',
         max_tokens: 4096,
         messages: [{ role: 'user', content: userContent }]
       })
