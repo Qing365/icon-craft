@@ -755,7 +755,7 @@
 
 </div>
 
-<footer>IconCraft · Powered by OpenRouter Free · API Key 保存于本地，不外传</footer>
+<footer>IconCraft · Powered by DeepSeek V4 Flash (Free) via OpenRouter · API Key 保存于本地，不外传</footer>
 
 <script>
 // ── STATE ──
@@ -931,21 +931,20 @@ async function generate() {
   const styleDesc = styleMap[S.style] || S.style;
 
   const promptText = `You are an expert SVG icon designer.
-${S.images.length > 0 ? 'Study the uploaded reference images carefully — extract the stroke weight, corner radius, color palette, level of detail, and overall visual character. Your icons MUST match this style.' : 'No reference images provided — use a clean professional icon style.'}
 
 Task: Generate exactly ${S.count} unique SVG icon variants for the concept: "${semantic}"
 
 Style directive: ${styleDesc}
-${S.images.length > 0 ? '⚠️ Replicate the visual style from the reference images.' : ''}
+${S.images.length > 0 ? `The user wants icons inspired by a reference image showing this style: ${styleDesc}. Apply this style carefully.` : ''}
 
 SVG requirements:
 - viewBox="0 0 24 24", no width/height attributes
 - Self-contained, no external resources
-- For line style: use stroke, stroke-linecap="round", stroke-linejoin="round", fill="none"
-- For filled/flat: use fill, no stroke unless essential
-- Colors: if reference provided, match its palette; otherwise use #1a1a2e for dark theme
+- For line style: use stroke="#e2e8f0", stroke-linecap="round", stroke-linejoin="round", fill="none", stroke-width="1.5"
+- For filled/flat: use fill="#e2e8f0"
 - Each variant must be noticeably different (angle, abstraction level, details, composition)
 - Clean, professional, recognizable at 24x24px
+- Use ONLY basic SVG shapes: path, circle, rect, line, polyline, polygon
 
 Respond ONLY with valid JSON array — no markdown fences, no explanation, no extra text:
 [{"svg":"<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>...</svg>","label":"描述变体特征，中文，≤6字"},...]`;
@@ -970,9 +969,9 @@ Respond ONLY with valid JSON array — no markdown fences, no explanation, no ex
         'X-Title': 'IconCraft'
       },
       body: JSON.stringify({
-        model: S.images.length > 0 ? 'nvidia/nemotron-nano-12b-v2-vl:free' : 'openrouter/free',
+        model: 'deepseek/deepseek-v4-flash:free',
         max_tokens: 4096,
-        messages: [{ role: 'user', content: userContent }]
+        messages: [{ role: 'user', content: promptText }]
       })
     });
 
