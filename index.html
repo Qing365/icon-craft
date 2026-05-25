@@ -970,7 +970,7 @@ Respond ONLY with valid JSON array — no markdown fences, no explanation, no ex
         'X-Title': 'IconCraft'
       },
       body: JSON.stringify({
-        model: 'openrouter/free',
+        model: S.images.length > 0 ? 'nvidia/nemotron-nano-12b-v2-vl:free' : 'openrouter/free',
         max_tokens: 4096,
         messages: [{ role: 'user', content: userContent }]
       })
@@ -984,10 +984,18 @@ Respond ONLY with valid JSON array — no markdown fences, no explanation, no ex
 
     const data = await resp.json();
     const raw = data.choices?.[0]?.message?.content || '';
-    if (!raw) throw new Error('返回内容为空，请重试');
+    if (!raw) {
+      const modelUsed = data.model || '未知';
+      throw new Error(`模型 ${modelUsed} 返回内容为空，请再试一次`);
+    }
 
-    const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    // 提取 JSON：找第一个 [ 到最后一个 ]
+    const jsonStart = raw.indexOf('[');
+    const jsonEnd = raw.lastIndexOf(']');
+    if (jsonStart === -1 || jsonEnd === -1) throw new Error('返回格式不对，请重试');
+    const clean = raw.slice(jsonStart, jsonEnd + 1);
     const icons = JSON.parse(clean);
+    if (!Array.isArray(icons) || icons.length === 0) throw new Error('未能解析图标数据，请重试');
 
     outputGrid.innerHTML = '';
     icons.forEach((ic, i) => {
