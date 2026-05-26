@@ -732,9 +732,9 @@
       <span class="count-label">数量：</span>
       <div class="count-btns" id="countBtns">
         <button class="count-btn" data-n="1">1</button>
-        <button class="count-btn" data-n="2">2</button>
+        <button class="count-btn active" data-n="2">2</button>
         <button class="count-btn" data-n="3">3</button>
-        <button class="count-btn active" data-n="4">4</button>
+        <button class="count-btn" data-n="4">4</button>
       </div>
     </div>
     <div class="error-toast" id="errorToast"></div>
@@ -755,7 +755,7 @@
 
 </div>
 
-<footer>IconCraft · Powered by DeepSeek V4 Flash (Free) via OpenRouter · API Key 保存于本地，不外传</footer>
+<footer>IconCraft · Powered by Qwen3 235B (Free) via OpenRouter · API Key 保存于本地，不外传</footer>
 
 <script>
 // ── STATE ──
@@ -763,7 +763,7 @@ const S = {
   images: [],
   style: 'line',
   tag: 'home',
-  count: 4,
+  count: 2,
   apiKey: '',
   generated: []
 };
@@ -930,35 +930,25 @@ async function generate() {
 
   const styleDesc = styleMap[S.style] || S.style;
 
-  const promptText = `You are an expert SVG icon designer.
+const prompt = `You are an expert SVG icon designer. Be concise.
+/no_think
 
 Task: Generate exactly ${S.count} unique SVG icon variants for the concept: "${semantic}"
 
-Style directive: ${styleDesc}
-${S.images.length > 0 ? `The user wants icons inspired by a reference image showing this style: ${styleDesc}. Apply this style carefully.` : ''}
+Style: ${styleDesc}
 
-SVG requirements:
-- viewBox="0 0 24 24", no width/height attributes
-- Self-contained, no external resources
-- For line style: use stroke="#e2e8f0", stroke-linecap="round", stroke-linejoin="round", fill="none", stroke-width="1.5"
-- For filled/flat: use fill="#e2e8f0"
-- Each variant must be noticeably different (angle, abstraction level, details, composition)
-- Clean, professional, recognizable at 24x24px
-- Use ONLY basic SVG shapes: path, circle, rect, line, polyline, polygon
+Rules (STRICT):
+- viewBox="0 0 24 24" only, no width/height
+- stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" for line style
+- fill="#e2e8f0" for filled style
+- Keep paths SHORT and SIMPLE — max 3-4 path elements per icon
+- Each variant must look different
+- NO comments, NO extra attributes
 
-Respond ONLY with valid JSON array — no markdown fences, no explanation, no extra text:
-[{"svg":"<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>...</svg>","label":"描述变体特征，中文，≤6字"},...]`;
+Output ONLY a JSON array, no markdown, no explanation:
+[{"svg":"<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>...</svg>","label":"中文6字内"},...]`;
 
-  // 构建 OpenRouter messages，图片用 base64 inline
-  const userContent = [];
-  S.images.slice(0, 3).forEach(img => {
-    userContent.push({
-      type: 'image_url',
-      image_url: { url: img.data }
-    });
-  });
-  userContent.push({ type: 'text', text: promptText });
-
+  // 构建 OpenRouter messages
   try {
     const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -969,9 +959,9 @@ Respond ONLY with valid JSON array — no markdown fences, no explanation, no ex
         'X-Title': 'IconCraft'
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-v4-flash:free',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: promptText }]
+        model: 'qwen/qwen3-235b-a22b:free',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }]
       })
     });
 
